@@ -357,11 +357,6 @@ esai_rxeven_isr
         movep   x:M_RX0,x:LeftRx        
         movep   x:LeftTx,x:M_TX0        
 
-    ;Process the scaling of knob values to generate coefficients        
-    ;   This is being called per sample, but could be done at a 
-    ;   slower rate if bandwidth is needed
-        bsr     Generate_Coeffs
-
         move    y:LeftOutput,x0         ; 
         move    x0,x:LeftTx             ; Transmit the output from the last sample period.
         move    y:RightOutput,x0        ; 
@@ -379,15 +374,15 @@ esai_rxeven_isr
         move    #>Switch_1,r6           ; point to x:mem (switch states)
         move    #>Filter_1_K,r4         ; point to x:mem (coefficients)
         move    #>Filter_1_A_Left,r3    ; point to y:mem (filter mem) 
-        bsr     TwoBand_EQ              ; input in a, output in a
+        bsr     Bitcrusher              ; input in a, output in a
         move    a,y:LeftOutput
 
-    ;Process Right Channel  (r6 is currently pointing to Switch 1)         
-        move    y:RightInput,a          ; load right input sample in a
-        move    #>Filter_1_K,r4         ; point to x:mem (coefficients)
-        move    #>Filter_1_A_Right,r3   ; point to y:mem (filter mem) 
-        bsr     TwoBand_EQ              ; input in a, output in a
-        move    a,y:RightOutput
+;    ;Process Right Channel  (r6 is currently pointing to Switch 1)         
+;        move    y:RightInput,a          ; load right input sample in a
+;        move    #>Filter_1_K,r4         ; point to x:mem (coefficients)
+;        move    #>Filter_1_A_Right,r3   ; point to y:mem (filter mem) 
+;        bsr     Bitcrusher              ; input in a, output in a
+;        move    a,y:RightOutput
        
     ;Use Bottom layer of FootSwitch to turn on/off analog bypass
     ;   take the momentary footswitch signal (pulse) and generate a latched (step) control signal
@@ -437,155 +432,5 @@ END_ANALOG_BYPASS:
 ;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
-;-----------------------------------------------------------------------
-;   TwoBand_EQ 
-;       This sub routine processes two state variable filters a
-;       with selectable filter type and shelving gain (-14dB to +14dB)
-;
-;       INPUT:      a  = audio input to be filtered
-;                   r6 = pointer to switch state memory
-;                   r4 = pointer to filter coefficients
-;                   r3 = pointer to filter memory
-;
-;       OUTPUT:     a  = filtered output
-;
-;
-TwoBand_EQ:
-        bsr     SV_Filter               ; process the state variable filter
-        ;select filter type
-        move    x:(r6)+,a            
-        jset    #1,a,Highpass_1_L       ; x0 = hp_output
-        jset    #0,a,Bandpass_1_L       ; b  = bp_output
-        jmp     EndSwitch_1_L           ; y0 = lp_output
-Highpass_1_L:
-        move    x0,b
-        move    b,y0
-        jmp     EndSwitch_1_L
-Bandpass_1_L:
-        move    b,y0
-EndSwitch_1_L:
-        mpy     x1,y0,a                 ; process shelving scalar
-        asl     #2,a,a                  ; add gain to extend shelving range -14dB to +14dB       
-        add     y1,a                    ; add filter input to create shelf
-
-        bsr     SV_Filter               ; process the state variable filter
-        ;select filter type
-        move    x:(r6)-,a            
-        jset    #1,a,Highpass_2_L       ; x0 = hp_output
-        jset    #0,a,Bandpass_2_L       ; b  = bp_output
-        jmp     EndSwitch_2_L           ; y0 = lp_output
-Highpass_2_L:
-        move    x0,b
-        move    b,y0
-        jmp     EndSwitch_2_L
-Bandpass_2_L:
-        move    b,y0
-EndSwitch_2_L:
-        mpy     x1,y0,a                 ; process shelving scalar
-        asl     #2,a,a                  ; add gain to extend shelving range -14dB to +14dB       
-        add     y1,a                    ; add filter input to create shelf  
-        rts
-
-
-;-----------------------------------------------------------------------
-;   SV_Filter 
-;       This sub routine is a state variable band-pass 
-;       This filter outputs low-pass, band-pass, and high-pass filter types
-;
-;       INPUT:      a  = audio input to be filtered
-;             x:(r4)+0 = frequency coefficient,  K = 2*pi*fc/Fs
-;             x:(r4)+1 = bandwidth coefficient,  1/(2Q) where Q is bandwidth
-;             x:(r4)+2 = shelving  coefficient  
-;
-;       OUTPUTS:    y0 = lp_output  
-;                   b  = bp_output  
-;                   x0 = hp_output  
-;                   a  = hp_output  
-;                   x1 = next coeff 
-;                   y1 = input
-;
-SV_Filter:
-        move    y:(r3)+,b                               ; b  = a(n-1)
-        move    x:(r4)+,x1  y:(r3)-,y0                  ; x1 = K                        y0  = y(n-1)
-        mac     x1,y0,b     x:(r4)+,x0                  ; b  = K * y(n-1) + a(n-1)      x0  = 1/2Q
-        mpy     -y0,x0,a    a,y1                        ; a  = -y(n-1)/2Q               y1  = x(n)
-        mac     y1,x0,a     b,y:(r3)                    ; a  = (x(n)-y(n-1))/2Q         store a(n)
-        asl     a                                       ; a  = (x(n)-y(n-1))/Q
-        sub     b,a         y0,b                        ; a  = (x(n)-y(n-1))/Q - a(n)   b  = y(n-1)
-        move    a,x0                                    ; x0 = HP output
-        mac     x1,x0,b     x:(r4)+,x1  y:(r3)+,y0      ; b  = k(HP) + y(n-1)           x1 = next coeff y0 = LP output
-        move    b,y:(r3)+                               ; store next y(n-1) 
-        rts 
-
-
-;-----------------------------------------------------------------------
-;   Generate_Coeffs 
-;       This sub routine takes the knob values that range from a 24 bit 
-;       two's compliment 0 to 1 (0x000000 to 0x7FFFFF) and converts them
-;       for use as coefficients.
-;
-;       This is example code is setup so that Fs = 39062.5
-;
-Generate_Coeffs:
-    ;Convert Knob 1 to Filter 1's Frequency
-        move    x:Knob_1,x0                             ; load Knob 1's current value (range = 0 to 1)
-        move    #>$010789,a                             ;  a =   50 Hz
-        move    #>$65EA0D,y0                            ; y0 = 4950 Hz
-            ; for frequency = 4950 Hz, the coefficient value will be 2*pi*4950/Fs = 0.796205242 
-            ; that number is then multiplied by (2^23)-1 for 24 bit two's compliment = 6679053 decimal = 65EA0D hex       
-        mac     x0,y0,a                                 ; a  =  4950 * value + 50; register a now ranges between 50 and 5000 Hz
-        move    a,x:Filter_1_K                          ; store current frequency value
-		move	a,x:Debug_Read_from_DSP_1				; DEBUG Example, send filter 1 frequency coefficient to GUI
-
-    ;Convert Knob 4 to Filter 2's Frequency
-        move    x:Knob_4,x0                             ; load Knob 4's value
-        move    #>$010789,a                             ; a  =   50 Hz
-        mac     x0,y0,a                                 ; a  =  4950 * value + 50
-        move    a,x:Filter_2_K                          ; store current frequency value
-		move	a,x:Debug_Read_from_DSP_2				; DEBUG Example, send filter 2 frequency coefficient to GUI
-                        
-    ;Convert Knob 2 to Filter 1's Q
-        move    x:Knob_2,x0                             ; load Knob 2's value
-        move    #>$866667,y0                            ; y0 = 1/2Q
-        move    #>$7FFFFF,a                             ; a  = 1/2Q, where Q = .5
-        mac     x0,y0,a                                 ; a  = 1/2Q, where Q ranges between .5 and 10
-        move    a,x:Filter_1_Q                          ; store current 1/2Q value
-		move	a,x:Debug_Read_from_DSP_3				; DEBUG Example, send filter 1 bandwidth to GUI
-
-    ;Convert Knob 5 to Filter 2's Q
-        move    x:Knob_5,x0                             ; load Knob 5's value
-        move    #>$7FFFFF,a                             ; a  = 1/2Q, where Q = .5
-        mac     x0,y0,a                                 ; a  = 1/2Q, where Q ranges between .5 and 10
-        move    a,x:Filter_2_Q                          ; store current 1/2Q value
-		move	a,x:Debug_Read_from_DSP_4				; DEBUG Example, send filter 2 bandwidth to GUI
-
-    ;Convert Knob 3 to Filter 1's Shelving
-        move    x:Knob_3,a                              ; load Knob 3's value (range = 0 to 1)
-        move    #>$400000,x0                            ; x0 = .5
-        sub     x0,a                                    ; (range = -.5 to .5)
-        cmp     #0,a                                    ; compare range to zero
-        jlt     CuttingShelve1                          ; jump if less than zero
-        asl     a                                       ; (range = 0  to 1)
-        jmp     DoneShelve1                             ; jump to dove shelve 1
-CuttingShelve1                                          ; generate negative shelve range
-        move    #>$333333,x0    a,y0                    ; x0 = .4
-        mpy     x0,y0,a                                 ; (range = -.2 to 0)
-DoneShelve1                                             ; mark end of shelve coeff curve generation
-        ; coefficient range = -.2 to 1 for a finale shelve range of -14dB to +14dB
-        move    a,x:Filter_1_Shelve                     ; store current shelving (range -.25 to 1)
-
-    ;Convert Knob 6 to Filter 2's Shelving
-        move    x:Knob_6,a                             ; load Knob 6's value (range = 0 to 1)
-        move    #>$400000,x0                            ; x0 = .5
-        sub     x0,a                                    ; (range = -.5 to .5)
-        cmp     #0,a                                    ; compare range to zero
-        jlt     CuttingShelve2                          ; jump if less than zero
-        asl     a                                       ; (range = 0  to 1)
-        jmp     DoneShelve2                             ; jump to dove shelve 1
-CuttingShelve2                                          ; generate negative shelve range
-        move    #>$333333,x0    a,y0                    ; x0 = .4
-        mpy     x0,y0,a                                 ; (range = -.2 to 0)
-DoneShelve2                                             ; mark end of shelve coeff curve generation
-        ; coefficient range = -.2 to 1 for a finale shelve range of -14dB to +14dB
-        move    a,x:Filter_2_Shelve                     ; store current shelving 
+Bitcrusher:
         rts
