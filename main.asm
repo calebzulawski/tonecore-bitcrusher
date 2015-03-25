@@ -1,6 +1,7 @@
                 page    132,60
-                include "..\Ioequ.inc"
-                include "..\vectors4.inc"                
+                include "Ioequ.inc"
+                include "vectors4.inc"                
+                include "sin.inc"
                 list
 
 ;---------------------------------------------------------------------------------------------------
