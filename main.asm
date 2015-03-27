@@ -432,33 +432,4 @@ END_ANALOG_BYPASS:
 ;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
-Bitcrusher:
-        move    a,y0            ;move sample to y0
-        move    #$0,b           ;b contains bits to remove 
-
-        ;determine bit depth reduction
-incb    macro   cmpval
-        ;The macro incrememnts b if the knob is less than or equal to the value cmpval  
-        move    x:Knob_1,a
-        move    #$000001,x0
-        cmp     cmpval,a
-        add     x0,b    ifle
-        endm
-
-        incb #$55555
-        incb #$aaaaa
-        incb #$fffff
-        incb #$155554
-        incb #$1aaaa9
-        incb #$1ffffe
-        incb #$255553
-        incb #$2aaaa8
-        incb #$2ffffd
-        incb #$355552
-        incb #$3aaaa7
-        incb #$3ffffc
-
-
-
-
-        move    y0,a        ;move sample back to a
+        include "effect.inc"
