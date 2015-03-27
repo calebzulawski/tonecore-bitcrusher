@@ -440,8 +440,9 @@ Bitcrusher:
 incb    macro   cmpval
         ;The macro incrememnts b if the knob is less than or equal to the value cmpval  
         move    x:Knob_1,a
+        move    #$000001,x0
         cmp     cmpval,a
-    inc b    ifle
+        add     x0,b    ifle
         endm
 
         incb #$55555
