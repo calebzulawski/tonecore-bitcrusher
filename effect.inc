@@ -7,6 +7,8 @@
 Bitcrusher:
         move    a,y:Current_Sample            ;store current sample
 
+        bsr     Read_LFO
+
         ;Resample
         clr     a
         clr     b
@@ -92,3 +94,8 @@ Mix:
 
         ;mixed sample is stored in a
         rts
+
+Read_LFO:
+        move    #$100,m7        ;confirm correct mod value
+        move    #$100,n7        ;confirm correct offset
+        
