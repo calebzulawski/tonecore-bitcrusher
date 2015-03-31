@@ -8,10 +8,23 @@ Knob_6  ds  1       ; 05h
 
         org     p:$4E
 
-        include "effect.inc"
+        move 	#255,b0
+        move 	#133,a0
+        cmp 	a,b
+        bsle 	Thing
+        ;move	#$300000,a1
+        ;move 	a1,x:Knob_1
+        ;clr 	a
+        ;move 	#$FFFFFF,a
 
-        move	#$6,x:$000
-        clr 	a
-        move 	#$FFFFFF,a1
+        ;bsr 	Bitcrusher
 
-        bsr 	Bitcrusher
+        jmp 	Done
+
+        ;include "effect.inc"
+
+Thing:
+		move #$123456,a
+		rts
+
+Done:

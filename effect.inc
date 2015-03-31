@@ -1,5 +1,20 @@
 Bitcrusher:
-        move    a,y0            ;move sample to y0
+        move    a,y:Current_Sample            ;store current sample
+
+        clr     a
+        clr     b
+        move    y:Resample_Counter,a0
+        move    x:Knob_1,b0
+        asr     #15,b,b         ;Make knob value from 0 to 255
+        cmp     b,a
+        bsgt    Load_Next_Sample
+        bsr     Apply_Effect
+        
+        
+
+
+Apply_Effect:
+        clr     a
         clr     b               ;b contains bits to remove 
         inc     b
 
@@ -7,8 +22,8 @@ Bitcrusher:
         move    #$1,a1
         move    a1,x0
 incb    macro   cmpval
-        ;The macro increments b if the knob is less than or equal to the value cmpval
-        move    x:Knob_1,a
+        ;The macro increments b if the knob is greater than or equal to the value cmpval
+        move    x:Knob_2,a
         cmp     cmpval,a
         add     x0,b    ifge
         endm
@@ -39,10 +54,14 @@ incb    macro   cmpval
 
         move    b,x0            ;x0 contains the number of bits to shift
         clr     b
-        move    #$FFFFFF,b1 ;set b to FFFFFF000000 (bit mask to be shifted)
+        move    #$FFFFFF,b1     ;set b to FFFFFF000000 (bit mask to be shifted)
         asl     x0,b,b          ;shift b to position
         move    b,x0            ;x0 contains bit mask
-        move    y0,a            ;a contains sample
+        move    y:Stored_Sample,a       ;a contains sample
         and     x0,a            ;multiply by bit mask
+        rts
 
+Load_Next_Sample:
+        move    y:Current_Sample,y:Stored_Sample        ;Update sample
+        move    #0,y:Resample_Counter                   ;Reset Resample_Counter
         rts

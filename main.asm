@@ -103,6 +103,12 @@ Filter_1_Y_Right        ds  1       ; 09h
 Filter_2_A_Right        ds  1       ; 0ah
 Filter_2_Y_Right        ds  1       ; 0bh
 
+;...Bitcrusher values
+Stored_Sample           ds  1
+Current_Sample          ds  1
+Resample_Counter        ds  1
+
+
 
 ;**************************************************************************
 
