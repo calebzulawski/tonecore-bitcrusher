@@ -5,29 +5,69 @@
 ;Knob_5: LFO speed
 
 Bitcrusher:
-        move    a,y:Current_Sample            ;store current sample
+        move    a,y:Current_Sample      ;store current sample
 
         bsr     Read_LFO
+        bsr     Resample
+        bsr     Reduce_Depth
+        bsr     Mix
+        rts
 
-        ;Resample
+Read_LFO:
+        move    #$100,m1        ;confirm correct mod value
+        move    #$100,n1        ;confirm correct offset
         clr     a
+        move    y:LFO_Counter,a0
+        inc     a
+        asl     #24,a,a
+        move    a1,y:LFO_Counter
+        move    #1221,x0        ;value makes LFO max at about 32Hz
+        move    x:Knob_5,b
+        div     x0,b
+        cmp     b,a
+        bsge    Increment_LFO
+        rts
+
+Increment_LFO:
+        move    y:(r1)+,y0      ;dummy move to increment
+        move    y:(r1)+n1,y0    ;read from wavetable with offset n1
+        move    y0,y:LFO_Value  ;write to y:LFO_Value
+        move    #$0,y0          ;clear LFO_Counter
+        move    y0,y:LFO_Counter
+        rts
+        
+Resample:
         clr     b
+        move    x:Knob_3,b
+        move    x:Switch_1,a
+        move    #$000001,x0
+        cmp     x0,a
+        bseq    Modify_Knob_LFO
+        clr     a
         move    y:Resample_Counter,a0
-        move    x:Knob_3,b0
-        asr     #15,b,b         ;Make knob value from 0 to 255
+        asr     #15,b,b                 ;Make knob value from 0 to 256
         cmp     b,a
         bsge    Load_Next_Sample
+        move    y:Stored_Sample,y0
+        move    y0,y:Modified_Sample
+        rts
 
+Modify_Knob_LFO:
+        move    x:Knob_4,x0
+        move    x:LFO_Value,x1
+        mpy     x0,x1,a
+        add     a,b
 
-        bsr     Apply_Effect
-        bsr     Mix
-        
-        
+Load_Next_Sample:
+        move    y:Current_Sample,y0
+        move    y0,y:Stored_Sample      ;Update sample
+        move    #$000000,y0
+        move    y0,y:Resample_Counter   ;Reset Resample_Counter
+        rts
 
-
-Apply_Effect:
+Reduce_Depth:
         clr     a
-        clr     b               ;b contains bits to remove 
+        clr     b                       ;b contains bits to remove 
         inc     b
 
         ;determine bit depth reduction
@@ -69,18 +109,13 @@ incb    macro   cmpval
         move    #$FFFFFF,b1     ;set b to FFFFFF000000 (bit mask to be shifted)
         asl     x0,b,b          ;shift b to position
         move    b,x0            ;x0 contains bit mask
-        move    y:Stored_Sample,a       ;a contains sample
+        move    y:Modified_Sample,a       ;a contains sample
         and     x0,a            ;multiply by bit mask
-        rts
-
-Load_Next_Sample:
-        move    y:Current_Sample,y0
-        move    y0,y:Stored_Sample        ;Update sample
-        move    #$000000,y0
-        move    y0,y:Resample_Counter                   ;Reset Resample_Counter
+        move    a,y:Modified_Sample
         rts
 
 Mix:
+        move    y:Modified_Sample,a
         ;multiply wet value by knob value
         move    a,x0
         move    x:Knob_1,x1
@@ -93,29 +128,5 @@ Mix:
         sub     x1,b
         move    b,y1
         mac     y0,y1,a
-
-        ;mixed sample is stored in a
-        rts
-
-Read_LFO:
-        move    #$100,m1        ;confirm correct mod value
-        move    #$100,n1        ;confirm correct offset
-        clr     a
-        move    y:LFO_Counter,a0
-        inc     a
-        asl     #24,a,a
-        move    a1,y:LFO_Counter
-        move    #1221,x0        ;value makes LFO max at about 32Hz
-        move    x:Knob_5,b
-        div     x0,b
-        cmp     b,a
-        bsge    Increment_LFO
-        rts
-
-Increment_LFO:
-        move    y:(r1)+,y0      ;dummy move to increment
-        move    y:(r1)+n1,y0    ;read from wavetable with offset n1
-        move    y0,y:LFO_Value  ;write to y:LFO_Value
-        move    #$0,y0          ;clear LFO_Counter
-        move    y0,y:LFO_Counter
+        move    a,y:Modified_Sample
         rts

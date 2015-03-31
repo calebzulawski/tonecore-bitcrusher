@@ -8,10 +8,9 @@ Knob_6  ds  1       ; 05h
 
         org     p:$4E
 
-        move 	#255,b0
-        move 	#133,a0
-        cmp 	a,b
-        bsle 	Thing
+        move    #$7fffff,a
+        move    #$000002,b1
+        add     b,a
         ;move	#$300000,a1
         ;move 	a1,x:Knob_1
         ;clr 	a
@@ -22,9 +21,5 @@ Knob_6  ds  1       ; 05h
         jmp 	Done
 
         ;include "effect.inc"
-
-Thing:
-		move #$123456,a
-		rts
 
 Done:

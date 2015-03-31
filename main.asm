@@ -106,6 +106,7 @@ Filter_2_Y_Right        ds  1       ; 0bh
 ;...Bitcrusher values
 Stored_Sample           ds  1
 Current_Sample          ds  1
+Modified_Sample         ds  1
 Resample_Counter        ds  1
 LFO_Value               ds  1
 LFO_Counter             ds  1
