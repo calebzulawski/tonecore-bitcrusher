@@ -108,6 +108,7 @@ Stored_Sample           ds  1
 Current_Sample          ds  1
 Resample_Counter        ds  1
 LFO_Value               ds  1
+LFO_Counter             ds  1
 
 
 

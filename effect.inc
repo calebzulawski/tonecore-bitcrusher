@@ -16,7 +16,7 @@ Bitcrusher:
         move    x:Knob_3,b0
         asr     #15,b,b         ;Make knob value from 0 to 255
         cmp     b,a
-        bsgt    Load_Next_Sample
+        bsge    Load_Next_Sample
 
 
         bsr     Apply_Effect
@@ -74,8 +74,10 @@ incb    macro   cmpval
         rts
 
 Load_Next_Sample:
-        move    y:Current_Sample,y:Stored_Sample        ;Update sample
-        move    #0,y:Resample_Counter                   ;Reset Resample_Counter
+        move    y:Current_Sample,y0
+        move    y0,y:Stored_Sample        ;Update sample
+        move    #$000000,y0
+        move    y0,y:Resample_Counter                   ;Reset Resample_Counter
         rts
 
 Mix:
@@ -96,6 +98,24 @@ Mix:
         rts
 
 Read_LFO:
-        move    #$100,m7        ;confirm correct mod value
-        move    #$100,n7        ;confirm correct offset
-        
+        move    #$100,m1        ;confirm correct mod value
+        move    #$100,n1        ;confirm correct offset
+        clr     a
+        move    y:LFO_Counter,a0
+        inc     a
+        asl     #24,a,a
+        move    a1,y:LFO_Counter
+        move    #1221,x0        ;value makes LFO max at about 32Hz
+        move    x:Knob_5,b
+        div     x0,b
+        cmp     b,a
+        bsge    Increment_LFO
+        rts
+
+Increment_LFO:
+        move    y:(r1)+,y0      ;dummy move to increment
+        move    y:(r1)+n1,y0    ;read from wavetable with offset n1
+        move    y0,y:LFO_Value  ;write to y:LFO_Value
+        move    #$0,y0          ;clear LFO_Counter
+        move    y0,y:LFO_Counter
+        rts
