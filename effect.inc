@@ -1,14 +1,24 @@
+;Knob_1: Mix
+;Knob_2: Crush
+;Knob_3: Resample freq
+;Knob_4: LFO depth
+;Knob_5: LFO speed
+
 Bitcrusher:
         move    a,y:Current_Sample            ;store current sample
 
+        ;Resample
         clr     a
         clr     b
         move    y:Resample_Counter,a0
-        move    x:Knob_1,b0
+        move    x:Knob_3,b0
         asr     #15,b,b         ;Make knob value from 0 to 255
         cmp     b,a
         bsgt    Load_Next_Sample
+
+
         bsr     Apply_Effect
+        bsr     Mix
         
         
 
@@ -64,4 +74,21 @@ incb    macro   cmpval
 Load_Next_Sample:
         move    y:Current_Sample,y:Stored_Sample        ;Update sample
         move    #0,y:Resample_Counter                   ;Reset Resample_Counter
+        rts
+
+Mix:
+        ;multiply wet value by knob value
+        move    a,x0
+        move    x:Knob_1,x1
+        clr     a
+        mac     x0,x1,a
+
+        ;multiply dry value by 1 minus knob value and accumulate
+        move    y:Current_Sample,y0
+        move    #$7fffff,b
+        sub     x1,b
+        move    b,y1
+        mac     y0,y1,a
+
+        ;mixed sample is stored in a
         rts
