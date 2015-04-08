@@ -6,11 +6,8 @@
 
 Bitcrusher:
         move    a,y:Current_Sample      ;store current sample
-        move    a,y:Modified_Sample     ;remove after debugging
 
         bsr     Read_LFO
-        move    y:LFO_Value,x0
-        move    x0,x:RightTx
         bsr     Resample
         bsr     Reduce_Depth
         bsr     Mix
