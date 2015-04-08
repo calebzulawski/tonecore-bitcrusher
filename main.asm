@@ -1,7 +1,6 @@
                 page    132,60
                 include "Ioequ.inc"
                 include "vectors4.inc"                
-                ;include "sin.inc"
                 list
 
 ;---------------------------------------------------------------------------------------------------
@@ -113,10 +112,10 @@ LFO_Counter             ds  1
 
 
 
-
 ;**************************************************************************
 
         org     p:$4E
+        bsr     Wavetable
 START
         ori     #$03,mr                 ; mask interrupts
         movep   #$2D0063,X:M_PCTL       ; Set PLL Control Register
@@ -443,3 +442,4 @@ END_ANALOG_BYPASS:
 
 
         include "effect.inc"
+        include "sin.inc"

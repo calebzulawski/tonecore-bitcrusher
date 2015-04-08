@@ -14,7 +14,7 @@ Bitcrusher:
         ;bsr     Read_LFO
         ;bsr     Resample
         bsr     Reduce_Depth
-        ;bsr     Mix
+        bsr     Mix
 
         move    y:Modified_Sample,x0
         move    x0,x:Debug_Read_from_DSP_2       
@@ -112,12 +112,12 @@ incb    macro   cmpval
         incb    #$75554e
         incb    #$7aaaa3
 
-        move    b,x0            ;x0 contains the number of bits to shift
+        move    b1,x0           ;x0 contains the number of bits to shift
         move    b,x:Debug_Read_from_DSP_3
         clr     b
         move    #$FFFFFF,b1     ;set b to FFFFFF000000 (bit mask to be shifted)
         asl     x0,b,b          ;shift b to position
-        move    b,x0            ;x0 contains bit mask
+        move    b1,x0           ;x0 contains bit mask
         move    x0,x:Debug_Read_from_DSP_4
         move    y:Modified_Sample,a       ;a contains sample
         and     x0,a            ;multiply by bit mask
