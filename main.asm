@@ -109,6 +109,7 @@ Modified_Sample         ds  1
 Resample_Counter        ds  1
 LFO_Value               ds  1
 LFO_Counter             ds  1
+LFO_CountMax            ds  1
 
 
 
